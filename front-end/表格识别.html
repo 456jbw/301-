@@ -1,0 +1,48 @@
+<!-- frontend/index.html -->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Image to Table Demo</title>
+</head>
+
+<body>
+    <h1>Image to Table Demo</h1>
+    <input type="file" id="imageFileInput">
+    <button id="convertBtn">Convert Image to Table</button>
+    <div id="responseContainer"></div>
+    <div id="tableContainer"></div>
+
+    <script>
+        document.getElementById('convertBtn').addEventListener('click', async function () {
+            document.getElementById('tableContainer').innerHTML = '<span>请稍等...</span>';
+            const imageFileInput = document.getElementById('imageFileInput');
+            const imageFile = imageFileInput.files[0];
+
+            const formData = new FormData();
+            formData.append('image', imageFile);
+
+            const response = await fetch('http://localhost:8000/api/image_to_table/', {
+                method: 'POST',
+                body: formData
+            });
+            const responseData = await response.json();
+
+
+            // 生成并显示表格
+            let tableHtml = '<table border="1">';
+            tableHtml += '<thead><tr>';
+            responseData.forEach(row => {
+                row.forEach(cell => {
+                    tableHtml += `<td>${cell}</td>`;
+                });
+                tableHtml += '</tr><tr>';
+            });
+            tableHtml += '</tr></thead></table>';
+
+            document.getElementById('tableContainer').innerHTML = tableHtml;
+        });
+    </script>
+</body>
+
+</html>
