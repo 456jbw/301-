@@ -6,43 +6,60 @@ from .utils import *
 # Create your views here.
 def image_to_table(request):
     # 初始化文本检测文本识别模型
-    ocr = PaddleOCR(use_angle_cls=True, lang="ch")  # need to run only once to download and load model into memory
+    ocr = PaddleOCR(use_angle_cls=True, lang="ch")
 
-    # ---读取处理后的指标键值对---
-
-    # 读取 全称-参考值 文件并解析为字典, 数据格式为{"全称":"参考值"}
-    with open(os.path.join(os.path.dirname(__file__),'info/北医三院/range.json'), 'r', encoding='utf-8') as json_file:
-        range_data = json.load(json_file)
-    # 读取 全称-缩写 文件并解析为字典, 数据格式为{"缩写":"全称"}
-    with open(os.path.join(os.path.dirname(__file__),'info/北医三院/name.json'), 'r', encoding='utf-8') as json_file:
-        name_data = json.load(json_file)
-    # 读取 全称-单位 文件并解析为字典, 数据格式为{"全称":"单位"}
-    with open(os.path.join(os.path.dirname(__file__),'info/北医三院/unit.json'), 'r', encoding='utf-8') as json_file:
-        unit_data = json.load(json_file)
-    # 读取 错误名称-全称 文件并解析为字典, 数据格式为{"错误名称":"全称"}
-    with open(os.path.join(os.path.dirname(__file__),'info/北医三院/error_name.json'), 'r', encoding='utf-8') as json_file:
-        error_name_data = json.load(json_file) 
-    # # 指定文件夹路径
-    # folder_path = 'data/北医三院jpg_test'
-
-    # # 获取文件夹中所有的 PNG 或 JPG 图片文件名
-    # image_files = get_image_files(folder_path)
-    save_path = ''
+    # 保存图片
     if request.method == 'POST' and request.FILES.get('image'):
         image_file = request.FILES['image']
         # 获取上传的图片文件名
         image_filename = image_file.name
         # 构造保存路径，这里假设保存在 MEDIA_ROOT 目录下的 images 文件夹中
-        save_path = os.path.join(os.path.dirname(__file__),'data/北医三院backend', image_filename)
+        save_path = os.path.join(os.path.dirname(__file__),'data/photos', image_filename)
         # 保存图片到指定路径
         with open(save_path, 'wb') as f:
             for chunk in image_file.chunks():
                 f.write(chunk)
-    
     file_path = save_path
+
+    # ---识别图片来自哪个医院---
+
+    # 获取已有数据的医院
+    folder_path = os.path.join(os.path.dirname(__file__),'info')
+    files_and_folders = os.listdir(folder_path)
+    hospital_names = [f for f in files_and_folders if os.path.isdir(os.path.join(folder_path, f))]
+
+    # 将所有文本进行匹配
+    cordinates = getImageInfo(file_path, ocr)
+
+    hospital_name = ''
+    for cordinate in cordinates:
+        tag = 0
+        for hospital in hospital_names:
+            if hospital in cordinate[1][0]:
+                hospital_name = hospital
+                tag = 1
+                break
+        if tag == 1:
+            break
+
+    # 根据所选医院加载相关信息
+    if hospital_name != '':
+        # 读取 全称-参考值 文件并解析为字典, 数据格式为{"全称":"参考值"}
+        with open(os.path.join(os.path.dirname(__file__), 'info', hospital_name, 'range.json'), 'r', encoding='utf-8') as json_file:
+            range_data = json.load(json_file)
+        # 读取 全称-缩写 文件并解析为字典, 数据格式为{"缩写":"全称"}
+        with open(os.path.join(os.path.dirname(__file__),'info',hospital_name,'name.json'), 'r', encoding='utf-8') as json_file:
+            name_data = json.load(json_file)
+        # 读取 全称-单位 文件并解析为字典, 数据格式为{"全称":"单位"}
+        with open(os.path.join(os.path.dirname(__file__),'info',hospital_name,'unit.json'), 'r', encoding='utf-8') as json_file:
+            unit_data = json.load(json_file)
+        # 读取 错误名称-全称 文件并解析为字典, 数据格式为{"错误名称":"全称"}
+        with open(os.path.join(os.path.dirname(__file__),'info',hospital_name,'error_name.json'), 'r', encoding='utf-8') as json_file:
+            error_name_data = json.load(json_file)
+
     # 获取当前图片坐标
     print(f'{file_path}:')
-    cordinates = getImageInfo(file_path, ocr)
+    # cordinates = getImageInfo(file_path, ocr)
     # print(cordinates) 
     original_cordinates = copy.deepcopy(cordinates)
     #cordinates格式如下:[[[[24.0, 458.0], [156.0, 456.0], [157.0, 483.0], [25.0, 485.0]], ('2015-08-30', 0.997961163520813)]]
