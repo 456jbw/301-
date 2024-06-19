@@ -4,6 +4,7 @@
 
 <head>
     <title>Image to Table Demo</title>
+    <meta charset="UTF-8">
 </head>
 
 <body>
@@ -22,9 +23,9 @@
             const formData = new FormData();
             formData.append('image', imageFile);
 
-            const response = await fetch('http://localhost:8000/api/image_to_table/', {
+            const response = await fetch('http://cc.qk0.cc:8000/api/image_to_table/', {
                 method: 'POST',
-                body: formData
+                body: formData,
             });
             const responseData = await response.json();
 
