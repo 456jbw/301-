@@ -43,6 +43,16 @@ def levenshtein_similarity(str1, str2):
 def find_most_similar_string_box(str1, string_box_list):
     if str1 == "":
         return None
+    # 找到完全一样的直接返回
+    for string_box in string_box_list:
+        if str1 == string_box[1][0]:
+            return string_box
+    # 对于被包含的也直接返回
+    for string_box in string_box_list:
+        if str1 in string_box[1][0]:
+            return string_box
+    # 以上两种情况都不包括则返回相似度最高的
+    print(str1)
     max_similarity = -1
     most_similar_string_box = None
     for string_box in string_box_list:
@@ -94,28 +104,66 @@ def calculate_center(box):
 def calculate_middle(left_point, right_point):
     return [(left_point[0] + right_point[0]) / 2, (left_point[1] + right_point[1]) / 2]
 
-# 计算由box_list中所有文本框确定的一条直线，以及离这条直线最近的文本框中从左到右的第index（从0开始）个文本框
-def calculate_res_box(box_list, all_box, box_num, result_x):
+# 通过直线得到结果值
+# def calculate_res_box(box_list, all_box, box_num, result_x):
+#     # print(box_list)
+#     #确定直线方程
+#     slope, intercept = calculate_slope_and_intercept(box_list)
+
+#     # 遍历所有检测框，计算距离最近的三个检测框
+#     points = [calculate_center(box) for box in all_box]
+#     distances = []
+#     for point in points:
+#         distance = distance_to_line(point, slope, intercept)
+#         distances.append(distance)
+#     # 获取距离最近的三个检测框
+#     closest_boxs_indices = np.argsort(distances)[:box_num]
+#     closest_boxs = [all_box[i] for i in closest_boxs_indices]
+#     sorted_boxs = sorted(closest_boxs, key=lambda x: x[0][0][0])
+#     # print(sorted_boxs)
+
+#     # 找出离横坐标离result_x最近的检测框
+#     distance = []
+#     for box in sorted_boxs:
+#         distance.append(abs(calculate_center(box)[0] - result_x))
+#     min_distance_index = distance.index(min(distance))
+#     return sorted_boxs[min_distance_index]
+
+def calculate_res_box(box_list, all_box, result_x):
     # print(box_list)
     #确定直线方程
     slope, intercept = calculate_slope_and_intercept(box_list)
+    intersection_point = [result_x, slope * result_x + intercept]
 
-    # 遍历所有检测框，计算距离最近的三个检测框
+    # 遍历所有检测框，计算距离交点最近检测框
     points = [calculate_center(box) for box in all_box]
     distances = []
     for point in points:
-        distance = distance_to_line(point, slope, intercept)
+        distance = distance_to_intersection(point, intersection_point)
         distances.append(distance)
-    # 获取距离最近的三个检测框
-    closest_boxs_indices = np.argsort(distances)[:box_num]
-    closest_boxs = [all_box[i] for i in closest_boxs_indices]
-    sorted_boxs = sorted(closest_boxs, key=lambda x: x[0][0][0])
-    # print(sorted_boxs)
+    min_distance_index = distances.index(min(distances))
+    if all_box[min_distance_index][1][0] == '结' or all_box[min_distance_index][1][0] == '结果':
+        min_distance = min(distances)
+        second_min_distance = 1000
+        for distance in distances:
+            if distance < second_min_distance and distance != min_distance:
+                second_min_distance = distance
+        second_min_distance_index = distances.index(second_min_distance)
+        return all_box[second_min_distance_index]
+    else:
+        return all_box[min_distance_index]
+    # # 获取距离最近的三个检测框
+    # closest_boxs_indices = np.argsort(distances)[:box_num]
+    # closest_boxs = [all_box[i] for i in closest_boxs_indices]
+    # sorted_boxs = sorted(closest_boxs, key=lambda x: x[0][0][0])
+    # # print(sorted_boxs)
 
-    # 找出离横坐标离result_x最近的检测框
-    distance = []
-    for box in sorted_boxs:
-        distance.append(abs(calculate_center(box)[0] - result_x))
-    min_distance_index = distance.index(min(distance))
-    return sorted_boxs[min_distance_index]
+    # # 找出离横坐标离result_x最近的检测框
+    # distance = []
+    # for box in sorted_boxs:
+    #     distance.append(abs(calculate_center(box)[0] - result_x))
+    # min_distance_index = distance.index(min(distance))
+    # return sorted_boxs[min_distance_index]
 
+def distance_to_intersection(point, intersection_point):
+    return ((point[0] - intersection_point[0]) ** 2 + (point[1] - intersection_point[1]) ** 2) ** 1/2
